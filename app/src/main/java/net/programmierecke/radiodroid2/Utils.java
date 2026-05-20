@@ -1,0 +1,728 @@
+package net.programmierecke.radiodroid2;
+
+import android.Manifest;
+import android.app.Activity;
+import android.content.ContentResolver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.pm.ShortcutInfo;
+import android.graphics.drawable.Icon;
+import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.Uri;
+import android.os.Build;
+import android.text.TextUtils;
+import android.util.Log;
+import android.util.TypedValue;
+import android.webkit.MimeTypeMap;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.preference.PreferenceManager;
+
+import com.google.gson.Gson;
+import com.mikepenz.iconics.IconicsColor;
+import com.mikepenz.iconics.IconicsDrawable;
+import com.mikepenz.iconics.IconicsSize;
+import com.mikepenz.iconics.typeface.IIcon;
+import com.squareup.picasso.Picasso;
+import com.squareup.picasso.Target;
+
+import net.programmierecke.radiodroid2.players.PlayStationTask;
+import net.programmierecke.radiodroid2.players.selector.PlayerSelectorDialog;
+import net.programmierecke.radiodroid2.players.selector.PlayerType;
+import net.programmierecke.radiodroid2.service.ConnectivityChecker;
+import net.programmierecke.radiodroid2.service.MediaSessionCallback;
+import net.programmierecke.radiodroid2.service.PlayerServiceUtil;
+import net.programmierecke.radiodroid2.station.DataRadioStation;
+
+import net.programmierecke.radiodroid2.proxy.ProxySettings;
+import net.programmierecke.radiodroid2.utils.Tls12SocketFactory;
+
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.security.KeyStore;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
+
+import okhttp3.Authenticator;
+import okhttp3.ConnectionSpec;
+import okhttp3.Credentials;
+import okhttp3.HttpUrl;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import okhttp3.Route;
+import okhttp3.TlsVersion;
+
+public class Utils {
+    private static int loadIcons = -1;
+
+    public static int parseIntWithDefault(String number, int defaultVal) {
+        try {
+            return Integer.parseInt(number);
+        } catch (NumberFormatException e) {
+            return defaultVal;
+        }
+    }
+
+    public static String getCacheFile(Context ctx, String theURI) {
+        StringBuilder chaine = new StringBuilder("");
+        try {
+            String aFileName = theURI.toLowerCase().replace("http://", "");
+            aFileName = aFileName.toLowerCase().replace("https://", "");
+            aFileName = sanitizeName(aFileName);
+
+            File file = new File(ctx.getCacheDir().getAbsolutePath() + "/" + aFileName);
+            Date lastModDate = new Date(file.lastModified());
+
+            Date now = new Date();
+            long millis = now.getTime() - file.lastModified();
+            long secs = millis / 1000;
+            long mins = secs / 60;
+            long hours = mins / 60;
+
+            if (BuildConfig.DEBUG) {
+                Log.d("UTIL", "File last modified : " + lastModDate.toString() + " secs=" + secs + "  mins=" + mins + " hours=" + hours);
+            }
+
+            if (hours < 1) {
+                FileInputStream aStream = new FileInputStream(file);
+                BufferedReader rd = new BufferedReader(new InputStreamReader(aStream));
+                String line;
+                while ((line = rd.readLine()) != null) {
+                    chaine.append(line);
+                }
+                rd.close();
+                if (BuildConfig.DEBUG) {
+                    Log.d("UTIL", "used cache for:" + theURI);
+                }
+                return chaine.toString();
+            }
+            if (BuildConfig.DEBUG) {
+                Log.d("UTIL", "do not use cache, because too old:" + theURI);
+            }
+            return null;
+        } catch (Exception e) {
+            Log.e("UTIL", "getCacheFile() " + e);
+        }
+        return null;
+    }
+
+    public static void writeFileCache(Context ctx, String theURI, String content) {
+        try {
+            String aFileName = theURI.toLowerCase().replace("http://", "");
+            aFileName = aFileName.toLowerCase().replace("https://", "");
+            aFileName = sanitizeName(aFileName);
+
+            File f = new File(ctx.getCacheDir() + "/" + aFileName);
+            FileOutputStream aStream = new FileOutputStream(f);
+            aStream.write(content.getBytes("utf-8"));
+            aStream.close();
+        } catch (Exception e) {
+            Log.e("UTIL", "writeFileCache() could not write to cache file for:" + theURI);
+        }
+    }
+
+    private static String downloadFeed(OkHttpClient httpClient, Context ctx, String theURI, boolean forceUpdate, Map<String, String> dictParams) {
+        Log.i("DOWN", "Url=" + theURI);
+        if (!forceUpdate) {
+            String cache = getCacheFile(ctx, theURI);
+            if (cache != null) {
+                return cache;
+            }
+        }
+        Log.i("DOWN", "Url=" + theURI + " (not cached)");
+
+        try {
+            HttpUrl url = HttpUrl.parse(theURI);
+            Request.Builder requestBuilder = new Request.Builder().url(url);
+
+            if (dictParams != null) {
+                MediaType jsonMediaType = MediaType.parse("application/json; charset=utf-8");
+
+                Gson gson = new Gson();
+                String json = gson.toJson(dictParams);
+
+                okhttp3.RequestBody requestBody = RequestBody.create(jsonMediaType, json);
+
+                requestBuilder.post(requestBody);
+            } else {
+                requestBuilder.get();
+            }
+
+            Request request = requestBuilder.build();
+            okhttp3.Response response = httpClient.newCall(request).execute();
+
+            String responseStr = response.body().string();
+
+            if (!response.isSuccessful()) {
+                Log.e("UTIL", "HTTP请求失败: URL=" + theURI + ", 状态码=" + response.code() + ", 消息=" + response.message() + ", 响应=" + responseStr);
+                return null;
+            }
+
+            writeFileCache(ctx, theURI, responseStr);
+            if (BuildConfig.DEBUG) {
+                Log.d("UTIL", "wrote cache file for:" + theURI);
+            }
+            return responseStr;
+        } catch (java.net.SocketTimeoutException e) {
+            Log.e("UTIL", "网络请求超时: URL=" + theURI + ", 错误=" + e.getMessage());
+        } catch (java.net.UnknownHostException e) {
+            Log.e("UTIL", "DNS解析失败: URL=" + theURI + ", 错误=" + e.getMessage());
+        } catch (java.net.ConnectException e) {
+            Log.e("UTIL", "连接失败: URL=" + theURI + ", 错误=" + e.getMessage());
+        } catch (java.io.IOException e) {
+            Log.e("UTIL", "IO错误: URL=" + theURI + ", 错误=" + e.getMessage());
+        } catch (Exception e) {
+            Log.e("UTIL", "downloadFeed() 未知错误: URL=" + theURI + ", 错误类型=" + e.getClass().getSimpleName() + ", 错误=" + e.getMessage());
+        }
+
+        return null;
+    }
+
+    public static String downloadFeedRelative(OkHttpClient httpClient, Context ctx, String theRelativeUri, boolean forceUpdate, Map<String, String> dictParams) {
+        // try current server for download
+        String currentServer = RadioBrowserServerManager.getCurrentServer();
+        if (currentServer == null) {
+            return null;
+        }
+
+        String endpoint = RadioBrowserServerManager.constructEndpoint(currentServer, theRelativeUri);
+        String result = downloadFeed(httpClient, ctx, endpoint, forceUpdate, dictParams);
+        if (result != null) {
+            return result;
+        }
+
+        // get a list of all servers
+        String[] serverList = RadioBrowserServerManager.getServerList(false);
+
+        // try all other servers for download
+        for (String newServer : serverList) {
+            if (newServer.equals(currentServer)) {
+                continue;
+            }
+
+            endpoint = RadioBrowserServerManager.constructEndpoint(newServer, theRelativeUri);
+            result = downloadFeed(httpClient, ctx, endpoint, forceUpdate, dictParams);
+            if (result != null) {
+                // set the working server as new current server
+                RadioBrowserServerManager.setCurrentServer(newServer);
+                return result;
+            }
+        }
+
+        return null;
+    }
+    
+    /**
+     * Download from a specific server with specified protocol
+     */
+    public static String downloadFeedFromServer(OkHttpClient httpClient, Context ctx, String server, String theRelativeUri, boolean useHttps, boolean forceUpdate, Map<String, String> dictParams) {
+        String endpoint = RadioBrowserServerManager.constructEndpoint(server, theRelativeUri, useHttps);
+        return downloadFeed(httpClient, ctx, endpoint, forceUpdate, dictParams);
+    }
+
+    public static String getRealStationLink(OkHttpClient httpClient, Context ctx, String stationId) {
+        Log.i("UTIL", "StationUUID:" + stationId);
+        String result = Utils.downloadFeedRelative(httpClient, ctx, "json/url/" + stationId, true, null);
+        if (result != null) {
+            Log.i("UTIL", result);
+            JSONObject jsonObj;
+            try {
+                jsonObj = new JSONObject(result);
+                return jsonObj.getString("url");
+            } catch (Exception e) {
+                Log.e("UTIL", "getRealStationLink() " + e);
+            }
+        }
+        return null;
+    }
+
+    @Deprecated
+    public static DataRadioStation getStationById(OkHttpClient httpClient, Context ctx, String stationId) {
+        Log.w("UTIL", "Search by id:" + stationId);
+        String result = Utils.downloadFeed(httpClient, ctx, "json/stations/byid/" + stationId, true, null);
+        if (result != null) {
+            try {
+                List<DataRadioStation> list = DataRadioStation.DecodeJson(result);
+                if (list != null) {
+                    if (list.size() == 1) {
+                        return list.get(0);
+                    }
+                    Log.e("UTIL", "stations by id did have length:" + list.size());
+                }
+            } catch (Exception e) {
+                Log.e("UTIL", "getStationByid() " + e);
+            }
+        }
+        return null;
+    }
+
+    public static DataRadioStation getStationByUuid(OkHttpClient httpClient, Context ctx, String stationUuid) {
+        Log.w("UTIL", "Search by uuid:" + stationUuid);
+        String result = Utils.downloadFeedRelative(httpClient, ctx, "json/stations/byuuid/" + stationUuid, true, null);
+        if (result != null) {
+            try {
+                List<DataRadioStation> list = DataRadioStation.DecodeJson(result);
+                if (list != null) {
+                    if (list.size() == 1) {
+                        return list.get(0);
+                    }
+                    Log.e("UTIL", "stations by uuid did have length:" + list.size());
+                }
+            } catch (Exception e) {
+                Log.e("UTIL", "getStationByUuid() " + e);
+            }
+        }
+        return null;
+    }
+
+    public static List<DataRadioStation> getStationsByUuid(OkHttpClient httpClient, Context ctx, Iterable<String> listUUids) {
+        String uuids = TextUtils.join(",", listUUids);
+        Log.d("UTIL", "Search by uuid for items");
+        HashMap<String, String> p = new HashMap<String, String>();
+        p.put("uuids", uuids);
+        String result = Utils.downloadFeedRelative(httpClient, ctx, "json/stations/byuuid", true, p);
+        if (result != null) {
+            try {
+                List<DataRadioStation> list = DataRadioStation.DecodeJson(result);
+                if (list != null) {
+                    return list;
+                }else{
+                    Log.e("UTIL", "stations by uuid was null");
+                }
+            } catch (Exception e) {
+                Log.e("UTIL", "getStationsByUuid() " + e);
+            }
+        }
+        return null;
+    }
+
+    public static @Nullable
+    DataRadioStation getCurrentOrLastStation(@NonNull Context ctx) {
+        DataRadioStation station = PlayerServiceUtil.getCurrentStation();
+        if (station == null) {
+            RadioDroidApp radioDroidApp = (RadioDroidApp) ctx.getApplicationContext();
+            HistoryManager historyManager = radioDroidApp.getHistoryManager();
+            station = historyManager.getFirst();
+        }
+
+        return station;
+    }
+
+    public static void showMpdServersDialog(final RadioDroidApp radioDroidApp, final FragmentManager fragmentManager, @Nullable final DataRadioStation station) {
+        Fragment oldFragment = fragmentManager.findFragmentByTag(PlayerSelectorDialog.FRAGMENT_TAG);
+        if (oldFragment != null && oldFragment.isVisible()) {
+            return;
+        }
+
+        PlayerSelectorDialog playerSelectorDialogFragment = new PlayerSelectorDialog(radioDroidApp.getMpdClient(), station);
+        playerSelectorDialogFragment.show(fragmentManager, PlayerSelectorDialog.FRAGMENT_TAG);
+    }
+
+    public static void showPlaySelection(final RadioDroidApp radioDroidApp, final DataRadioStation station, final FragmentManager fragmentManager) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(radioDroidApp);
+        if (prefs.getBoolean("play_external", false)) {
+            showMpdServersDialog(radioDroidApp, fragmentManager, station);
+        } else {
+            playAndWarnIfMetered(radioDroidApp, station, PlayerType.RADIODROID, () -> play(radioDroidApp, station));
+        }
+    }
+
+    public static void playAndWarnIfMetered(RadioDroidApp radioDroidApp, DataRadioStation station, PlayerType playerType, Runnable playFunc) {
+        playAndWarnIfMetered(radioDroidApp, station, playerType, playFunc,
+                (station1, playerType1) -> {
+                    // Making sure that resuming from notification or some external event will actually resume
+                    // and not issue warning a second time.
+                    PlayerServiceUtil.setStation(station1);
+                    PlayerServiceUtil.warnAboutMeteredConnection(playerType1);
+                });
+    }
+
+    public static boolean urlIndicatesHlsStream(String streamUrl) {
+        final Pattern p = Pattern.compile(".*\\.m3u8([#?\\s].*)?$");
+        return p.matcher(streamUrl).matches();
+    }
+
+    public interface MeteredWarningCallback {
+        void warn(DataRadioStation station, PlayerType playerType);
+    }
+
+    // TODO: Sort out the indirection when PlayerService won't need aidl and we won't need to have
+    //  PlayerServiceUtil as a proxy between common code and the service.
+    public static void playAndWarnIfMetered(RadioDroidApp radioDroidApp, DataRadioStation station, PlayerType playerType,
+                                            Runnable playFunc, MeteredWarningCallback warningCallback) {
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(radioDroidApp);
+        final boolean warnOnMetered = sharedPref.getBoolean("warn_no_wifi", false);
+
+        if (warnOnMetered && ConnectivityChecker.getCurrentConnectionType(radioDroidApp) == ConnectivityChecker.ConnectionType.METERED) {
+            warningCallback.warn(station, playerType);
+        } else {
+            playFunc.run();
+        }
+    }
+
+    public static void play(final RadioDroidApp radioDroidApp, final DataRadioStation station) {
+        PlayerServiceUtil.play(station);
+    }
+
+    public static boolean shouldLoadIcons(final Context context) {
+        switch (loadIcons) {
+            case -1:
+                if (PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("load_icons", false)) {
+                    loadIcons = 1;
+                    return true;
+                } else {
+                    loadIcons = 0;
+                    return true;
+                }
+            case 0:
+                return false;
+            case 1:
+                return true;
+        }
+        return false;
+    }
+
+    public static String getTheme(final Context context) {
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
+        return sharedPref.getString("theme_name", context.getResources().getString(R.string.theme_light));
+    }
+
+    public static int getThemeResId(final Context context) {
+        String selectedTheme = getTheme(context);
+        if (selectedTheme.equals(context.getResources().getString(R.string.theme_dark)))
+            return R.style.MyMaterialTheme_Dark;
+        else
+            return R.style.MyMaterialTheme;
+    }
+
+    public static boolean isDarkTheme(final Context context) {
+        return getThemeResId(context) == R.style.MyMaterialTheme_Dark;
+    }
+
+    public static int getTimePickerThemeResId(final Context context) {
+        int theme;
+        if (getThemeResId(context) == R.style.MyMaterialTheme_Dark)
+            theme = R.style.DialogTheme_Dark;
+        else
+            theme = R.style.DialogTheme;
+        return theme;
+    }
+    
+    public static int getAlertDialogThemeResId(final Context context) {
+        int theme;
+        if (getThemeResId(context) == R.style.MyMaterialTheme_Dark)
+            theme = R.style.AlertTheme_Dark;
+        else
+            theme = R.style.AlertTheme;
+        return theme;
+    }
+    
+    public static int getBottomSheetDialogThemeResId(final Context context) {
+        int theme;
+        if (getThemeResId(context) == R.style.MyMaterialTheme_Dark)
+            theme = R.style.BottomSheetDialogTheme_Dark;
+        else
+            theme = R.style.BottomSheetDialogTheme;
+        return theme;
+    }
+
+    public static boolean useCircularIcons(final Context context) {
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
+        return sharedPref.getBoolean("circular_icons", false);
+    }
+
+    // Storage Permissions
+    private static String[] PERMISSIONS_STORAGE = {
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+    };
+
+    public static boolean verifyStoragePermissions(Activity activity, int request_id) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return true;
+        }
+
+        int permission = ContextCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                    activity,
+                    PERMISSIONS_STORAGE,
+                    request_id
+            );
+            return false;
+        }
+
+        return true;
+    }
+
+    public static boolean verifyStoragePermissions(Fragment fragment, int request_id) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return true;
+        }
+
+        int permission = ContextCompat.checkSelfPermission(fragment.requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE);
+
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            fragment.requestPermissions(PERMISSIONS_STORAGE, request_id);
+            return false;
+        }
+
+        return true;
+    }
+
+    public static String getReadableBytes(double bytes) {
+        String[] str = new String[]{"B", "KB", "MB", "GB", "TB"};
+        for (String aStr : str) {
+            if (bytes < 1024) {
+                return String.format(Locale.getDefault(), "%1$,.1f %2$s", bytes, aStr);
+            }
+            bytes = bytes / 1024;
+        }
+        return String.format(Locale.getDefault(), "%1$,.1f %2$s", bytes * 1024, str[str.length - 1]);
+    }
+
+    public static String sanitizeName(String str) {
+        return str.replaceAll("\\W+", "_").replaceAll("^_+", "").replaceAll("_+$", "");
+    }
+
+    public static boolean hasWifiConnection(Context context) {
+        ConnectivityManager connManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+
+        return mWifi.isConnected();
+    }
+
+    public static boolean hasAnyConnection(Context context) {
+        ConnectivityManager connManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = connManager.getActiveNetworkInfo();
+        //should check null because in airplane mode it will be null
+        return (netInfo != null && netInfo.isConnected());
+    }
+
+    public static boolean bottomNavigationEnabled(Context context) {
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
+        return sharedPref.getBoolean("bottom_navigation", true);
+    }
+
+    public static String formatStringWithNamedArgs(String format, Map<String, String> args) {
+        StringBuilder builder = new StringBuilder(format);
+        for (Map.Entry<String, String> entry : args.entrySet()) {
+            final String key = "${" + entry.getKey() + "}";
+            int startIdx = 0;
+            while (true) {
+                final int keyIdx = builder.indexOf(key, startIdx);
+
+                if (keyIdx == -1) {
+                    break;
+                }
+
+                builder.replace(keyIdx, keyIdx + key.length(), entry.getValue());
+                startIdx = keyIdx + entry.getValue().length();
+            }
+        }
+
+        return builder.toString();
+    }
+
+    public static int themeAttributeToColor(int themeAttributeId, Context context, int fallbackColorId) {
+        TypedValue outValue = new TypedValue();
+        Resources.Theme theme = context.getTheme();
+        boolean wasResolved = theme.resolveAttribute(themeAttributeId, outValue, true);
+        if (wasResolved) {
+            return outValue.resourceId == 0 ? outValue.data : ContextCompat.getColor(context, outValue.resourceId);
+        } else {
+            return fallbackColorId;
+        }
+    }
+
+    public static int getIconColor(Context context) {
+        return themeAttributeToColor(R.attr.menuTextColorDefault, context, Color.LTGRAY);
+    }
+
+    public static int getAccentColor(Context context) {
+        return themeAttributeToColor(android.R.attr.colorPrimary, context, Color.LTGRAY);
+    }
+
+    /**
+     * Add proxy to an okhttp builder.
+     *
+     * @return true if successful, false otherwise
+     */
+    public static boolean setOkHttpProxy(@NonNull OkHttpClient.Builder builder, @NonNull final ProxySettings proxySettings) {
+        if (proxySettings.type == Proxy.Type.DIRECT) {
+            java.net.Authenticator.setDefault(null);
+            return true;
+        }
+        if (TextUtils.isEmpty(proxySettings.host)) {
+            java.net.Authenticator.setDefault(null);
+            return false;
+        }
+        if (proxySettings.port < 1 || proxySettings.port > 65535) {
+            java.net.Authenticator.setDefault(null);
+            return false;
+        }
+        InetSocketAddress proxyAddress = InetSocketAddress.createUnresolved(proxySettings.host, proxySettings.port);
+        Proxy proxy = new Proxy(proxySettings.type, proxyAddress);
+
+        builder.proxy(proxy);
+
+        if (!proxySettings.login.isEmpty()) {
+            final String login = proxySettings.login;
+            final String password = proxySettings.password;
+
+            if (proxySettings.type == Proxy.Type.SOCKS) {
+                java.net.Authenticator.setDefault(new java.net.Authenticator() {
+                    @Override
+                    protected java.net.PasswordAuthentication getPasswordAuthentication() {
+                        if (getRequestorType() == RequestorType.PROXY) {
+                            return new java.net.PasswordAuthentication(login, password.toCharArray());
+                        }
+                        return null;
+                    }
+                });
+            } else {
+                java.net.Authenticator.setDefault(null);
+            }
+
+            Authenticator proxyAuthenticator = new Authenticator() {
+                @Override
+                public Request authenticate(Route route, Response response) throws IOException {
+                    if (response.code() != 407) {
+                        return null;
+                    }
+                    if (response.request().header("Proxy-Authorization") != null) {
+                        return null;
+                    }
+                    String credential = Credentials.basic(login, password);
+                    return response.request().newBuilder()
+                            .header("Proxy-Authorization", credential)
+                            .build();
+                }
+            };
+
+            builder.proxyAuthenticator(proxyAuthenticator);
+        } else {
+            java.net.Authenticator.setDefault(null);
+        }
+
+        return true;
+    }
+
+    public static Uri resourceToUri(Resources resources, int resID) {
+        return Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" +
+                resources.getResourcePackageName(resID) + '/' +
+                resources.getResourceTypeName(resID) + '/' +
+                resources.getResourceEntryName(resID));
+    }
+
+    public static IconicsDrawable IconicsIcon(Context context, IIcon icon) {
+        return new IconicsDrawable(context, icon).size(IconicsSize.TOOLBAR_ICON_SIZE).padding(IconicsSize.TOOLBAR_ICON_PADDING).color(IconicsColor.colorInt(getIconColor(context)));
+    }
+
+    public static String getMimeType(String url, String defaultMimeType) {
+        String type = defaultMimeType;
+        String extension = MimeTypeMap.getFileExtensionFromUrl(url);
+        if (extension != null) {
+            type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+        }
+        return type;
+    }
+
+    public static OkHttpClient.Builder enableTls12OnPreLollipop(OkHttpClient.Builder client) {
+        if (Build.VERSION.SDK_INT >= 16 && Build.VERSION.SDK_INT < 22) {
+            try {
+                TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                trustManagerFactory.init((KeyStore)null);
+                TrustManager[] tmList = trustManagerFactory.getTrustManagers();
+                Log.i("OkHttpTLSCompat", "Found trustmanagers:"+tmList.length);
+                X509TrustManager tm = (X509TrustManager)tmList[0];
+
+                SSLContext sc = SSLContext.getInstance("TLSv1.2");
+                sc.init(null, null, null);
+                client.sslSocketFactory(new Tls12SocketFactory(sc.getSocketFactory()), tm);
+
+                ConnectionSpec cs = new ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
+                        .tlsVersions(TlsVersion.TLS_1_2)
+                        .build();
+
+                List<ConnectionSpec> specs = new ArrayList<>();
+                specs.add(cs);
+                specs.add(ConnectionSpec.COMPATIBLE_TLS);
+                specs.add(ConnectionSpec.CLEARTEXT);
+
+                client.connectionSpecs(specs);
+            } catch (Exception exc) {
+                Log.e("OkHttpTLSCompat", "Error while setting TLS 1.2", exc);
+            }
+        }
+
+        return client;
+    }
+
+    /**
+     * 创建电台快捷方式
+     * @param context 上下文
+     * @param station 电台对象
+     * @param id 快捷方式ID
+     * @return ShortcutInfo对象
+     */
+    public static ShortcutInfo createShortcutForStation(Context context, DataRadioStation station, int id) {
+        if (Build.VERSION.SDK_INT >= 25) {
+            // 使用默认图标创建快捷方式
+            Intent playByUUIDintent = new Intent(MediaSessionCallback.ACTION_PLAY_STATION_BY_UUID, null, context, ActivityMain.class)
+                    .putExtra(MediaSessionCallback.EXTRA_STATION_UUID, station.StationUuid);
+            
+            ShortcutInfo.Builder builder = new ShortcutInfo.Builder(context.getApplicationContext(), 
+                    context.getPackageName() + "/" + station.StationUuid + "/" + id)
+                    .setShortLabel(station.Name)
+                    .setIntent(playByUUIDintent);
+            
+            // 如果有图标，使用图标
+            if (station.hasIcon()) {
+                // 这里简化处理，使用默认图标
+                // 在实际应用中，可以使用异步加载图标
+                builder.setIcon(Icon.createWithResource(context, R.drawable.ic_launcher));
+            } else {
+                builder.setIcon(Icon.createWithResource(context, R.drawable.ic_launcher));
+            }
+            
+            return builder.build();
+        }
+        return null;
+    }
+}
