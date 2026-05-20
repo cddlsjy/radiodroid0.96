@@ -9,6 +9,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Environment;
 import android.preference.PreferenceManager;
+import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -332,6 +333,11 @@ public class StationSaveManager extends Observable {
         return false;
     }
 
+    private boolean isOfflineMode() {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        return prefs.getBoolean("disable_online_verification", false);
+    }
+
     public List<DataRadioStation> getList() {
         return Collections.unmodifiableList(listStations);
     }
@@ -386,7 +392,7 @@ public class StationSaveManager extends Observable {
                 station.queue = this;
             }
             listStations.addAll(arr);
-            if (hasInvalidUuids() && Utils.hasAnyConnection(context)) {
+            if (!isOfflineMode() && hasInvalidUuids() && Utils.hasAnyConnection(context)) {
                 refreshStationsFromServer();
             }
         } else {
@@ -554,6 +560,7 @@ public class StationSaveManager extends Observable {
     }
 
     protected final String M3U_PREFIX = "#RADIOBROWSERUUID:";
+    protected final String M3U_ICON_PREFIX = "#EXTIMG:";
 
     boolean SaveM3UInternal(String filePath, String fileName) {
         final RadioDroidApp radioDroidApp = (RadioDroidApp) context.getApplicationContext();
@@ -581,6 +588,9 @@ public class StationSaveManager extends Observable {
             for (DataRadioStation station : listStations) {
                 bw.write(M3U_PREFIX + station.StationUuid + "\n");
                 bw.write("#EXTINF:-1," + station.Name + "\n");
+                if (station.hasIcon()) {
+                    bw.write(M3U_ICON_PREFIX + station.IconUrl + "\n");
+                }
                 bw.write(station.StreamUrl + "\n\n");
             }
             bw.flush();
@@ -617,41 +627,85 @@ public class StationSaveManager extends Observable {
     protected List<DataRadioStation> LoadM3UReader(Reader reader) {
         try {
             String line;
+            String stationName = "";
+            String stationUuid = "";
+            String stationUrl = "";
+            String stationIconUrl = "";
 
             final RadioDroidApp radioDroidApp = (RadioDroidApp) context.getApplicationContext();
             final OkHttpClient httpClient = radioDroidApp.getHttpClient();
             ArrayList<String> listUuids = new ArrayList<String>();
 
             BufferedReader br = new BufferedReader(reader);
+            List<DataRadioStation> resultStations = new ArrayList<>();
+
             while ((line = br.readLine()) != null) {
                 Log.v("LOAD", "line: "+line);
                 if (line.startsWith(M3U_PREFIX)) {
                     try {
                         if (line.length() > M3U_PREFIX.length()) {
-                            String uuid = line.substring(M3U_PREFIX.length()).trim();
-                            listUuids.add(uuid);
+                            stationUuid = line.substring(M3U_PREFIX.length()).trim();
+                            listUuids.add(stationUuid);
                         }
                     } catch (Exception e) {
                         Log.e("LOAD", e.toString());
                     }
+                } else if (line.startsWith("#EXTINF:")) {
+                    int commaIndex = line.indexOf(",");
+                    if (commaIndex >= 0 && commaIndex < line.length() - 1) {
+                        stationName = line.substring(commaIndex + 1).trim();
+                    }
+                } else if (line.startsWith(M3U_ICON_PREFIX)) {
+                    stationIconUrl = line.substring(M3U_ICON_PREFIX.length()).trim();
+                } else if (line.startsWith("http")) {
+                    stationUrl = line.trim();
+                    
+                    if (!stationUrl.isEmpty()) {
+                        DataRadioStation station = new DataRadioStation();
+                        station.StationUuid = stationUuid;
+                        station.Name = stationName;
+                        station.StreamUrl = stationUrl;
+                        station.IconUrl = stationIconUrl;
+                        station.TagsAll = "";
+                        station.Country = "";
+                        station.CountryCode = "";
+                        station.State = "";
+                        station.Language = "";
+                        station.HomePageUrl = "";
+                        station.Bitrate = 0;
+                        station.Votes = 0;
+                        station.ClickCount = 0;
+                        station.ClickTrend = 0;
+                        station.Working = true;
+                        station.Hls = false;
+                        
+                        if (TextUtils.isEmpty(station.StationUuid)) {
+                            station.StationUuid = java.util.UUID.randomUUID().toString();
+                            station.ChangeUuid = station.StationUuid;
+                        }
+                        
+                        if (!stationUuid.isEmpty() && !isOfflineMode()) {
+                            DataRadioStation remoteStation = Utils.getStationByUuid(httpClient, context, stationUuid);
+                            if (remoteStation != null) {
+                                station.copyPropertiesFrom(remoteStation);
+                                if (!stationIconUrl.isEmpty()) {
+                                    station.IconUrl = stationIconUrl;
+                                }
+                            }
+                        }
+                        
+                        resultStations.add(station);
+                    }
+                    
+                    stationName = "";
+                    stationUuid = "";
+                    stationUrl = "";
+                    stationIconUrl = "";
                 }
             }
             br.close();
 
-            List<DataRadioStation> listStationsNew = Utils.getStationsByUuid(httpClient, context, listUuids);
-
-            // sort list to have the same order as the initial save file
-            List<DataRadioStation> listStationsSorted = new ArrayList<DataRadioStation>();
-            for (String uuid: listUuids)
-            {
-                for (DataRadioStation s: listStationsNew){
-                    if (uuid.equals(s.StationUuid)){
-                        listStationsSorted.add(s);
-                        break;
-                    }
-                }
-            }
-            return listStationsSorted;
+            return resultStations;
         } catch (Exception e) {
             Log.e("LOAD", "File read failed: " + e.toString());
             return null;

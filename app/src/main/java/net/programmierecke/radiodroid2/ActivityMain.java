@@ -390,8 +390,8 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
             f = new FragmentStarred();
         } else if (selectedMenuItem == R.id.nav_item_history) {
             f = new FragmentHistory();
-        } else if (selectedMenuItem == R.id.nav_item_alarm) {
-            f = new FragmentAlarm();
+        } else if (selectedMenuItem == R.id.nav_item_custom) {
+            f = new FragmentCustomStations();
         } else if (selectedMenuItem == R.id.nav_item_settings) {
             f = new FragmentSettings();
         }
@@ -749,6 +749,20 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
                 menuItemDelete.setVisible(true).setTitle(R.string.action_delete_favorites);
             }
             myToolbar.setTitle(R.string.nav_item_starred);
+        } else if (selectedMenuItem == R.id.nav_item_custom) {
+            menuItemSleepTimer.setVisible(true);
+            menuItemSort.setVisible(false);
+            menuItemSave.setVisible(true);
+            menuItemLoad.setVisible(true);
+            menuItemSave.setTitle(R.string.nav_item_save_playlist);
+
+            CustomStationManager customStationManager = new CustomStationManager(this);
+            if (!customStationManager.isEmpty()) {
+                menuItemDelete.setVisible(true).setTitle(R.string.action_delete_custom);
+            } else {
+                menuItemDelete.setVisible(false);
+            }
+            myToolbar.setTitle(R.string.nav_item_custom);
         } else if (selectedMenuItem == R.id.nav_item_history) {
             menuItemSleepTimer.setVisible(true);
             menuItemSort.setVisible(false);
@@ -760,10 +774,6 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
                 menuItemDelete.setVisible(true).setTitle(R.string.action_delete_history);
             }
             myToolbar.setTitle(R.string.nav_item_history);
-        } else if (selectedMenuItem == R.id.nav_item_alarm) {
-            menuItemSort.setVisible(false);
-            menuItemAddAlarm.setVisible(true);
-            myToolbar.setTitle(R.string.nav_item_alarm);
         }
  /* settings fragment sets the toolbar title depending on the current preference screen
         else if (selectedMenuItem == R.id.nav_item_settings) {
@@ -877,16 +887,23 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
                             }
                             
                             RadioDroidApp radioDroidApp = (RadioDroidApp) getApplication();
-                            FavouriteManager favouriteManager = radioDroidApp.getFavouriteManager();
                             
                             InputStream is = getContentResolver().openInputStream(finalUri);
                             InputStreamReader reader = new InputStreamReader(is);
-                            
-                            // 直接调用LoadM3UReader获取结果
-                            importedStations = favouriteManager.LoadM3UReader(reader);
+
+                            if (selectedMenuItem == R.id.nav_item_custom) {
+                                CustomStationManager customStationManager = new CustomStationManager(ActivityMain.this);
+                                importedStations = customStationManager.LoadM3UReader(reader);
+                            } else if (selectedMenuItem == R.id.nav_item_history) {
+                                HistoryManager historyManager = radioDroidApp.getHistoryManager();
+                                importedStations = historyManager.LoadM3UReader(reader);
+                            } else {
+                                FavouriteManager favouriteManager = radioDroidApp.getFavouriteManager();
+                                importedStations = favouriteManager.LoadM3UReader(reader);
+                            }
+
                             if (importedStations != null) {
                                 importedCount = importedStations.size();
-                                // 不在这里调用addMultiple，只保存数据
                             } else {
                                 exception = new Exception(getResources().getString(R.string.error_import_failed_parse));
                             }
@@ -909,11 +926,24 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
                                 Toast.makeText(ActivityMain.this, getResources().getString(R.string.error_import_failed, exception.getMessage()), Toast.LENGTH_SHORT).show();
                             }
                         } else if (importedStations != null) {
-                            // 在主线程中添加电台到收藏列表
                             RadioDroidApp radioDroidApp = (RadioDroidApp) getApplication();
-                            FavouriteManager favouriteManager = radioDroidApp.getFavouriteManager();
-                            favouriteManager.addMultiple(importedStations);
-                            Toast.makeText(ActivityMain.this, getResources().getString(R.string.success_imported_stations, importedCount, fileName), Toast.LENGTH_LONG).show();
+                            if (selectedMenuItem == R.id.nav_item_custom) {
+                                CustomStationManager customStationManager = new CustomStationManager(ActivityMain.this);
+                                customStationManager.addMultiple(importedStations);
+                                Toast.makeText(ActivityMain.this, getResources().getString(R.string.success_imported_stations_custom, importedCount, fileName), Toast.LENGTH_LONG).show();
+                                if (getSupportFragmentManager().findFragmentById(R.id.containerView) instanceof FragmentCustomStations) {
+                                    FragmentCustomStations fragment = (FragmentCustomStations) getSupportFragmentManager().findFragmentById(R.id.containerView);
+                                    fragment.RefreshListGui();
+                                }
+                            } else if (selectedMenuItem == R.id.nav_item_history) {
+                                HistoryManager historyManager = radioDroidApp.getHistoryManager();
+                                historyManager.addMultiple(importedStations);
+                                Toast.makeText(ActivityMain.this, getResources().getString(R.string.success_imported_stations, importedCount, fileName), Toast.LENGTH_LONG).show();
+                            } else {
+                                FavouriteManager favouriteManager = radioDroidApp.getFavouriteManager();
+                                favouriteManager.addMultiple(importedStations);
+                                Toast.makeText(ActivityMain.this, getResources().getString(R.string.success_imported_stations, importedCount, fileName), Toast.LENGTH_LONG).show();
+                            }
                         }
                     }
                 }.execute();
@@ -1034,6 +1064,22 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
                                     favouriteManager.clear();
 
                                     Toast toast = Toast.makeText(getApplicationContext(), getString(R.string.notify_deleted_favorites), Toast.LENGTH_SHORT);
+                                    toast.show();
+                                    recreate();
+                                }
+                            })
+                            .setNegativeButton(this.getString(R.string.no), null)
+                            .show();
+                } else if (selectedMenuItem == R.id.nav_item_custom) {
+                    new AlertDialog.Builder(this, Utils.getAlertDialogThemeResId(this))
+                            .setMessage(this.getString(R.string.alert_delete_custom))
+                            .setCancelable(true)
+                            .setPositiveButton(this.getString(R.string.yes), new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                    CustomStationManager customStationManager = new CustomStationManager(ActivityMain.this);
+                                    customStationManager.clear();
+
+                                    Toast toast = Toast.makeText(getApplicationContext(), getString(R.string.notify_deleted_custom), Toast.LENGTH_SHORT);
                                     toast.show();
                                     recreate();
                                 }
@@ -1381,6 +1427,12 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
                         if (meteredConnectionAlertDialog != null) {
                             meteredConnectionAlertDialog.cancel();
                             meteredConnectionAlertDialog = null;
+                        }
+                        
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ActivityMain.this);
+                        boolean autoFullscreen = prefs.getBoolean("auto_fullscreen_on_play", false);
+                        if (autoFullscreen) {
+                            playerBottomSheet.setState(BottomSheetBehavior.STATE_EXPANDED);
                         }
                     }
                 }

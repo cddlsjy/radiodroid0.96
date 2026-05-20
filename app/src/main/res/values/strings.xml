@@ -286,6 +286,9 @@ This will overwrite the current main database, please ensure you have backed up 
     <string name="settings_auto_off_on_startup_off">Do not use auto-stop timer with auto-play</string>
     <string name="settings_auto_off_sleep_timer">Auto-stop timer</string>
     <string name="settings_auto_off_sleep_timer_desc">Stop playing after %1$s minutes</string>
+    <string name="settings_auto_fullscreen_on_play">Auto-fullscreen on play</string>
+    <string name="settings_auto_fullscreen_on_play_on">Enter fullscreen mode when starting playback</string>
+    <string name="settings_auto_fullscreen_on_play_off">Do not enter fullscreen mode on playback</string>
     <string name="settings_play_external">Enable external player</string>
     <string name="settings_play_external_desc_on">Play stations with external player</string>
     <string name="settings_play_external_desc_off">Play stations with RadioDroid</string>
@@ -365,6 +368,7 @@ This will overwrite the current main database, please ensure you have backed up 
 
     <string name="alert_delete_history">Do you really want to delete the history?</string>
     <string name="alert_delete_favorites">Do you really want to delete all favorites?</string>
+    <string name="alert_delete_custom">Do you really want to delete all custom stations?</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
 
@@ -628,6 +632,7 @@ The app will automatically restart to load the new database.</string>
     <string name="error_import_failed_parse">Import failed: Unable to parse file</string>
     <string name="error_import_failed">Import failed: %1$s</string>
     <string name="success_imported_stations">Imported %1$d stations from %2$s</string>
+    <string name="success_imported_stations_custom">Imported %1$d custom stations from %2$s</string>
     
     <!-- Error messages -->
     <string name="error_network_unavailable">Network connection unavailable, please check network settings</string>
@@ -659,5 +664,27 @@ The app will automatically restart to load the new database.</string>
     <string name="recording_pause">Pause</string>
     <string name="recording_play_external">Play with external player</string>
     <string name="recording_empty_file">Recording file is empty</string>
+
+    <string name="pref_disable_online_verification_title">Offline mode</string>
+    <string name="pref_disable_online_verification_summary">Do not verify stations online; use local M3U data only</string>
+    <string name="pref_compatibility_mode_title">Compatibility mode</string>
+    <string name="pref_compatibility_mode_summary">Use legacy file picker for Android 4.4 and older devices</string>
+    <string name="error_station_not_found_offline">Station not found offline.</string>
+    <string name="error_random_play_offline">Random play is not available in offline mode.</string>
+
+    <string name="settings_fullscreen_mode">Fullscreen mode</string>
+    <string name="settings_fullscreen_mode_default">Default</string>
+    <string name="settings_fullscreen_mode_simplified">Simplified</string>
+    <string name="settings_fullscreen_mode_landscape">Landscape</string>
+    <string name="settings_fullscreen_mode_cover">Cover</string>
+    <string name="pref_auto_fullscreen_on_start_title">Auto enter fullscreen on startup</string>
+    <string name="pref_auto_fullscreen_on_start_summary">Automatically expand player to fullscreen mode when app starts</string>
+    <string name="tab_player_favourites">Favorites</string>
+    <string name="nav_item_custom">Custom</string>
+    <string name="action_delete_custom">Delete custom</string>
+    <string name="notify_deleted_custom">The custom station list has been cleared</string>
+    <string name="empty_custom_stations">No custom stations</string>
+    <string name="empty_custom_stations_hint">Tap import button to import M3U file</string>
+    <string name="startup_show_custom">Show custom stations</string>
 
 </resources>

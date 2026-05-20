@@ -78,4 +78,17 @@
         <item>es</item>
     </string-array>
 
+    <string-array name="fullscreen_mode_entries">
+        <item>@string/settings_fullscreen_mode_default</item>
+        <item>@string/settings_fullscreen_mode_simplified</item>
+        <item>@string/settings_fullscreen_mode_landscape</item>
+        <item>@string/settings_fullscreen_mode_cover</item>
+    </string-array>
+    <string-array name="fullscreen_mode_values">
+        <item>default</item>
+        <item>simplified</item>
+        <item>landscape</item>
+        <item>cover</item>
+    </string-array>
+
 </resources>

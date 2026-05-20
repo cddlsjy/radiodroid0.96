@@ -75,6 +75,11 @@ import java.util.Observable;
 public class FragmentPlayerFull extends Fragment {
     private final String TAG = "FragmentPlayerFull";
 
+    private static final String FULLSCREEN_MODE_DEFAULT = "default";
+    private static final String FULLSCREEN_MODE_SIMPLIFIED = "simplified";
+    private static final String FULLSCREEN_MODE_LANDSCAPE = "landscape";
+    private static final String FULLSCREEN_MODE_COVER = "cover";
+
     private final static int PERM_REQ_STORAGE_RECORD = 1001;
 
     /**
@@ -87,6 +92,24 @@ public class FragmentPlayerFull extends Fragment {
     }
 
     private TouchInterceptListener touchInterceptListener;
+
+    private boolean isLandscapeModeActive() {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(requireContext());
+        String mode = prefs.getString("fullscreen_mode", FULLSCREEN_MODE_DEFAULT);
+        
+        if (FULLSCREEN_MODE_COVER.equals(mode)) {
+            int orientation = getResources().getConfiguration().orientation;
+            return (orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE);
+        }
+        
+        return FULLSCREEN_MODE_LANDSCAPE.equals(mode);
+    }
+
+    private boolean isSimplifiedModeActive() {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(requireContext());
+        String mode = prefs.getString("fullscreen_mode", FULLSCREEN_MODE_DEFAULT);
+        return FULLSCREEN_MODE_SIMPLIFIED.equals(mode);
+    }
 
     private BroadcastReceiver updateUIReceiver;
 

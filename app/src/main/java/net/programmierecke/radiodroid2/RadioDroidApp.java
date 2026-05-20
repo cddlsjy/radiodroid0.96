@@ -19,11 +19,17 @@ import net.programmierecke.radiodroid2.players.mpd.MPDClient;
 import net.programmierecke.radiodroid2.station.live.metadata.TrackMetadataSearcher;
 import net.programmierecke.radiodroid2.proxy.ProxySettings;
 import net.programmierecke.radiodroid2.recording.RecordingsManager;
+import net.programmierecke.radiodroid2.station.DataRadioStation;
 import net.programmierecke.radiodroid2.utils.TvChannelManager;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+import android.util.Log;
 
 import okhttp3.Cache;
 import okhttp3.ConnectionPool;
@@ -99,6 +105,8 @@ public class RadioDroidApp extends MultiDexApplication {
         fallbackStationsManager = new FallbackStationsManager(this);
         recordingsManager = new RecordingsManager();
         alarmManager = new RadioAlarmManager(this);
+
+        importCollectionM3U();
 
         UiModeManager uiModeManager = (UiModeManager) getSystemService(UI_MODE_SERVICE);
         if (uiModeManager.getCurrentModeType() == Configuration.UI_MODE_TYPE_TELEVISION) {
@@ -240,5 +248,23 @@ public class RadioDroidApp extends MultiDexApplication {
         setCurrentOkHttpProxy(builder);
 
         return builder.build();
+    }
+
+    private void importCollectionM3U() {
+        try {
+            InputStream inputStream = getResources().openRawResource(R.raw.collection);
+            InputStreamReader reader = new InputStreamReader(inputStream, "UTF-8");
+            List<DataRadioStation> stations = favouriteManager.LoadM3UReader(reader);
+            
+            if (stations != null && !stations.isEmpty()) {
+                for (DataRadioStation station : stations) {
+                    if (!favouriteManager.has(station.StationUuid)) {
+                        favouriteManager.add(station);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e("RadioDroidApp", "Failed to import collection.m3u", e);
+        }
     }
 }

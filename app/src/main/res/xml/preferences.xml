@@ -76,6 +76,15 @@
             android:key="bottom_navigation"
             android:title="@string/settings_bottom_navigation" />
 
+            <ListPreference
+            android:defaultValue="default"
+            android:entries="@array/fullscreen_mode_entries"
+            android:entryValues="@array/fullscreen_mode_values"
+            android:key="fullscreen_mode"
+            android:title="@string/settings_fullscreen_mode"
+            search:summary=""
+            android:summary="%s" />
+
     </PreferenceScreen>
 
     <PreferenceScreen android:title="@string/settings_startup_behaviour"
@@ -115,6 +124,13 @@
             android:summary="@string/settings_auto_off_sleep_timer_desc"
             search:summary=""
             android:title="@string/settings_auto_off_sleep_timer" />
+
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="auto_fullscreen_on_play"
+            android:summaryOff="@string/settings_auto_fullscreen_on_play_off"
+            android:summaryOn="@string/settings_auto_fullscreen_on_play_on"
+            android:title="@string/settings_auto_fullscreen_on_play" />
 
     </PreferenceScreen>
 
@@ -166,6 +182,18 @@
             android:title="@string/settings_single_use_tags" />
 
     </PreferenceScreen>
+
+    <SwitchPreferenceCompat
+        android:key="disable_online_verification"
+        android:title="@string/pref_disable_online_verification_title"
+        android:summary="@string/pref_disable_online_verification_summary"
+        android:defaultValue="false" />
+
+    <SwitchPreferenceCompat
+        android:key="compatibility_mode"
+        android:title="@string/pref_compatibility_mode_title"
+        android:summary="@string/pref_compatibility_mode_summary"
+        android:defaultValue="false" />
 
     <PreferenceScreen android:title="@string/settings_play"
         search:ignore="true"

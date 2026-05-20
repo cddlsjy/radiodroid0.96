@@ -214,6 +214,7 @@ public class Utils {
     }
 
     public static String downloadFeedRelative(OkHttpClient httpClient, Context ctx, String theRelativeUri, boolean forceUpdate, Map<String, String> dictParams) {
+        if (isOfflineMode(ctx)) return null;
         // try current server for download
         String currentServer = RadioBrowserServerManager.getCurrentServer();
         if (currentServer == null) {
@@ -537,6 +538,16 @@ public class Utils {
     public static boolean bottomNavigationEnabled(Context context) {
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
         return sharedPref.getBoolean("bottom_navigation", true);
+    }
+
+    public static boolean isOfflineMode(Context context) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        return prefs.getBoolean("disable_online_verification", false);
+    }
+
+    public static boolean isCompatibilityMode(Context context) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        return prefs.getBoolean("compatibility_mode", false);
     }
 
     public static String formatStringWithNamedArgs(String format, Map<String, String> args) {
