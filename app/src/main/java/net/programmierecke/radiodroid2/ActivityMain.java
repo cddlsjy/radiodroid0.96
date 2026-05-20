@@ -831,6 +831,10 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
                                 } else if (selectedMenuItem == R.id.nav_item_history) {
                                     // 直接写入到输出流
                                     success = historyManager.SaveM3UToStream(outputStream);
+                                } else if (selectedMenuItem == R.id.nav_item_custom) {
+                                    // 自定义电台写入到输出流
+                                    CustomStationManager customStationManager = new CustomStationManager(ActivityMain.this);
+                                    success = customStationManager.SaveM3UToStream(outputStream);
                                 } else {
                                     success = false;
                                 }
@@ -958,15 +962,24 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
             RadioDroidApp radioDroidApp = (RadioDroidApp) getApplication();
             FavouriteManager favouriteManager = radioDroidApp.getFavouriteManager();
             HistoryManager historyManager = radioDroidApp.getHistoryManager();
+            CustomStationManager customStationManager = new CustomStationManager(this);
 
             if (dialog instanceof SaveFileDialog) {
                 if (selectedMenuItem == R.id.nav_item_starred) {
                     favouriteManager.SaveM3U(file.getParent(), file.getName());
-                }else if (selectedMenuItem == R.id.nav_item_history) {
+                } else if (selectedMenuItem == R.id.nav_item_history) {
                     historyManager.SaveM3U(file.getParent(), file.getName());
+                } else if (selectedMenuItem == R.id.nav_item_custom) {
+                    customStationManager.SaveM3U(file.getParent(), file.getName());
                 }
             } else if (dialog instanceof OpenFileDialog) {
-                favouriteManager.LoadM3U(file.getParent(), file.getName());
+                if (selectedMenuItem == R.id.nav_item_starred) {
+                    favouriteManager.LoadM3U(file.getParent(), file.getName());
+                } else if (selectedMenuItem == R.id.nav_item_custom) {
+                    customStationManager.LoadM3U(file.getParent(), file.getName());
+                } else {
+                    favouriteManager.LoadM3U(file.getParent(), file.getName());
+                }
             }
         } catch (Exception e) {
             Log.e("MAIN", e.toString());
@@ -981,6 +994,17 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
         String timestamp = sdf.format(new Date());
         String defaultFileName = "RadioDroid_Favorites_" + timestamp + "_" + favouriteCount + "stations.m3u";
         
+        // 检查兼容模式：启用时使用传统文件选择器，适用于低版本Android设备
+        if (Utils.isCompatibilityMode(this)) {
+            SaveFileDialog dialog = new SaveFileDialog();
+            dialog.setStyle(DialogFragment.STYLE_NO_TITLE, R.style.AppTheme);
+            Bundle args = new Bundle();
+            args.putString(FileDialog.EXTENSION, "m3u");
+            dialog.setArguments(args);
+            dialog.show(getSupportFragmentManager(), SaveFileDialog.class.getName());
+            return;
+        }
+        
         // 使用系统文件选择器
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -990,6 +1014,17 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
     }
 
     void LoadFavourites() {
+        // 检查兼容模式：启用时使用传统文件选择器，适用于低版本Android设备
+        if (Utils.isCompatibilityMode(this)) {
+            OpenFileDialog dialog = new OpenFileDialog();
+            dialog.setStyle(DialogFragment.STYLE_NO_TITLE, R.style.AppTheme);
+            Bundle args = new Bundle();
+            args.putString(FileDialog.EXTENSION, "m3u");
+            dialog.setArguments(args);
+            dialog.show(getSupportFragmentManager(), OpenFileDialog.class.getName());
+            return;
+        }
+        
         // 使用系统文件选择器
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);

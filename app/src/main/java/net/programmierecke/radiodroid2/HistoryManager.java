@@ -23,13 +23,18 @@ public class HistoryManager extends StationSaveManager{
         DataRadioStation stationFromHistory = getById(station.StationUuid);
         if (stationFromHistory != null) {
             listStations.remove(stationFromHistory);
+            stationFromHistory.queue = station.queue;
             listStations.add(0, stationFromHistory);
             Save();
             return;
         }
 
         cutList(MAXSIZE - 1);
+        StationSaveManager originalQueue = station.queue;
         super.addFront(station);
+        if (originalQueue != null) {
+            station.queue = originalQueue;
+        }
     }
 
     private void cutList(int count){
