@@ -108,6 +108,10 @@ class IcyDataSourceTest {
         public void onDataSourceBytesRead(byte[] buffer, int offset, int length) {
             transferredBytesWithoutMetadata.append(new String(buffer, offset,length));
         }
+
+        @Override
+        public void onDataSourceContentType(String contentType) {
+        }
     }
 
     static class TestTransferListener implements TransferListener {

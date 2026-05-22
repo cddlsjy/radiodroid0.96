@@ -1,0 +1,1 @@
+Remove-Item -Recurse -Force 'app\build' -ErrorAction SilentlyContinue; Remove-Item -Recurse -Force 'build' -ErrorAction SilentlyContinue; & 'C:\Users\M8400\.gradle\wrapper\dists\gradle-8.12-bin\7vg77h8jomrdpgh5hmwhreghw\gradle-8.12\bin\gradle.bat' assembleFreeDebug

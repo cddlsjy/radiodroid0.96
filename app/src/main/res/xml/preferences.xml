@@ -189,12 +189,6 @@
         android:summary="@string/pref_disable_online_verification_summary"
         android:defaultValue="false" />
 
-    <SwitchPreferenceCompat
-        android:key="compatibility_mode"
-        android:title="@string/pref_compatibility_mode_title"
-        android:summary="@string/pref_compatibility_mode_summary"
-        android:defaultValue="false" />
-
     <PreferenceScreen android:title="@string/settings_play"
         search:ignore="true"
         android:key="pref_category_player">

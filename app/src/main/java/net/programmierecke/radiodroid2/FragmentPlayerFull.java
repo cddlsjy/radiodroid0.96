@@ -13,6 +13,7 @@ import android.os.Handler;
 import android.text.TextUtils;
 import android.text.format.DateUtils;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -323,6 +324,36 @@ public class FragmentPlayerFull extends Fragment {
         }
 
         return view;
+    }
+
+    public boolean handleKeyEvent(int keyCode, KeyEvent event) {
+        if (event.getAction() == KeyEvent.ACTION_DOWN) {
+            switch (keyCode) {
+                case KeyEvent.KEYCODE_DPAD_UP:
+                    PlayerServiceUtil.skipToPrevious();
+                    return true;
+                case KeyEvent.KEYCODE_DPAD_DOWN:
+                    PlayerServiceUtil.skipToNext();
+                    return true;
+                case KeyEvent.KEYCODE_DPAD_CENTER:
+                case KeyEvent.KEYCODE_ENTER:
+                    togglePlayPause();
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    private void togglePlayPause() {
+        if (PlayerServiceUtil.isPlaying()) {
+            if (PlayerServiceUtil.isRecording()) {
+                PlayerServiceUtil.stopRecording();
+                updateRunningRecording();
+            }
+            PlayerServiceUtil.pause(PauseReason.USER);
+        } else {
+            playLastFromHistory();
+        }
     }
 
     public void init() {

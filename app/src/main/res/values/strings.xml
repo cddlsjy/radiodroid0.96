@@ -667,8 +667,6 @@ The app will automatically restart to load the new database.</string>
 
     <string name="pref_disable_online_verification_title">Offline mode</string>
     <string name="pref_disable_online_verification_summary">Do not verify stations online; use local M3U data only</string>
-    <string name="pref_compatibility_mode_title">Compatibility mode</string>
-    <string name="pref_compatibility_mode_summary">Use legacy file picker for Android 4.4 and older devices</string>
     <string name="error_station_not_found_offline">Station not found offline.</string>
     <string name="error_random_play_offline">Random play is not available in offline mode.</string>
 

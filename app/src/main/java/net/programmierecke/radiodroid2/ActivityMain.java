@@ -17,6 +17,7 @@ import android.os.Bundle;
 import android.provider.DocumentsContract;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -416,6 +417,17 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
     }
 
     @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (playerBottomSheet.getState() == BottomSheetBehavior.STATE_EXPANDED
+                && fullPlayerFragment != null && fullPlayerFragment.isVisible()) {
+            if (fullPlayerFragment.handleKeyEvent(event.getKeyCode(), event)) {
+                return true;
+            }
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
+    @Override
     public void onBackPressed() {
         if (playerBottomSheet.getState() == BottomSheetBehavior.STATE_EXPANDED) {
             playerBottomSheet.setState(BottomSheetBehavior.STATE_COLLAPSED);
@@ -493,15 +505,11 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
             case PERM_REQ_STORAGE_FAV_LOAD: {
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     LoadFavourites();
-                } else {
-                    LoadFavourites();
                 }
                 return;
             }
             case PERM_REQ_STORAGE_FAV_SAVE: {
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    SaveFavourites();
-                } else {
                     SaveFavourites();
                 }
                 return;
@@ -987,15 +995,16 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
     }
 
     void SaveFavourites() {
-        // 创建导出文件名：导出时间和电台数量
         FavouriteManager favouriteManager = new FavouriteManager(this);
         int favouriteCount = favouriteManager.getList().size();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault());
         String timestamp = sdf.format(new Date());
         String defaultFileName = "RadioDroid_Favorites_" + timestamp + "_" + favouriteCount + "stations.m3u";
-        
-        // 检查兼容模式：启用时使用传统文件选择器，适用于低版本Android设备
+
         if (Utils.isCompatibilityMode(this)) {
+            if (!Utils.verifyStoragePermissions(this, PERM_REQ_STORAGE_FAV_SAVE)) {
+                return;
+            }
             SaveFileDialog dialog = new SaveFileDialog();
             dialog.setStyle(DialogFragment.STYLE_NO_TITLE, R.style.AppTheme);
             Bundle args = new Bundle();
@@ -1004,18 +1013,19 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
             dialog.show(getSupportFragmentManager(), SaveFileDialog.class.getName());
             return;
         }
-        
-        // 使用系统文件选择器
+
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("audio/x-mpegurl");
+        intent.setType("*/*");
         intent.putExtra(Intent.EXTRA_TITLE, defaultFileName);
         startActivityForResult(intent, ACTION_SAVE_FILE);
     }
 
     void LoadFavourites() {
-        // 检查兼容模式：启用时使用传统文件选择器，适用于低版本Android设备
         if (Utils.isCompatibilityMode(this)) {
+            if (!Utils.verifyStoragePermissions(this, PERM_REQ_STORAGE_FAV_LOAD)) {
+                return;
+            }
             OpenFileDialog dialog = new OpenFileDialog();
             dialog.setStyle(DialogFragment.STYLE_NO_TITLE, R.style.AppTheme);
             Bundle args = new Bundle();
@@ -1024,12 +1034,10 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
             dialog.show(getSupportFragmentManager(), OpenFileDialog.class.getName());
             return;
         }
-        
-        // 使用系统文件选择器
+
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("audio/x-mpegurl");
-        intent.putExtra(Intent.EXTRA_TITLE, "playlist.m3u");
+        intent.setType("*/*");
         startActivityForResult(intent, ACTION_LOAD_FILE);
     }
 
