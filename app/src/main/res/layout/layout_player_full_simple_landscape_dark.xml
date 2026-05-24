@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_dark_blue">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:gravity="center"
+            android:padding="32dp">
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/stationIcon"
+                android:layout_width="180dp"
+                android:layout_height="180dp"
+                android:background="@color/divider_dark_blue"
+                android:scaleType="centerCrop"
+                app:shapeAppearanceOverlay="@style/Circle"
+                app:srcCompat="@drawable/ic_launcher" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="3"
+            android:gravity="center_vertical"
+            android:orientation="vertical"
+            android:padding="32dp">
+
+            <TextView
+                android:id="@+id/playerStationName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAlignment="viewStart"
+                android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+                android:textColor="@color/text_secondary_on_dark_blue"
+                tools:text="Station Name" />
+
+            <TextView
+                android:id="@+id/playerStationMetadata"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:ellipsize="marquee"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:marqueeRepeatLimit="marquee_forever"
+                android:singleLine="true"
+                android:textAlignment="viewStart"
+                android:textAppearance="@style/TextAppearance.AppCompat.Large"
+                android:textColor="@color/text_on_dark_blue"
+                tools:text="Now Playing Metadata" />
+
+            <LinearLayout
+                android:id="@+id/layoutPlaybackControls"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <ImageButton
+                    android:id="@+id/buttonPrev"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/description_btn_skip_to_previous"
+                    android:scaleType="fitXY"
+                    android:tint="@color/text_on_dark_blue"
+                    app:srcCompat="@drawable/ic_skip_previous_circle" />
+
+                <ImageButton
+                    android:id="@+id/buttonPlay"
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
+                    android:layout_marginHorizontal="16dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/detail_play"
+                    android:scaleType="fitXY"
+                    android:tint="@color/text_on_dark_blue"
+                    app:srcCompat="@drawable/ic_play_circle" />
+
+                <ImageButton
+                    android:id="@+id/buttonNext"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/description_btn_skip_to_next"
+                    android:scaleType="fitXY"
+                    android:tint="@color/text_on_dark_blue"
+                    app:srcCompat="@drawable/ic_skip_next_circle" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/buttonFullscreenExit"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/description_btn_exit_fullscreen"
+        android:scaleType="fitCenter"
+        android:tint="@color/text_on_dark_blue"
+        app:srcCompat="@drawable/ic_expand_more_white_24dp" />
+
+</FrameLayout>
