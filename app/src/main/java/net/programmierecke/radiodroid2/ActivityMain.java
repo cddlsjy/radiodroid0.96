@@ -36,6 +36,7 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.core.view.GravityCompat;
 import androidx.core.view.MenuItemCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import android.view.View;
 
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -132,6 +133,7 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
 
     private AppBarLayout appBarLayout;
     private TabLayout tabsView;
+    private View fragmentPlayerSmallContainer;
 
     DrawerLayout mDrawerLayout;
     NavigationView mNavigationView;
@@ -221,6 +223,7 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
         appBarLayout = findViewById(R.id.app_bar_layout);
         tabsView = findViewById(R.id.tabs);
         mDrawerLayout = findViewById(R.id.drawerLayout);
+        fragmentPlayerSmallContainer = findViewById(R.id.fragment_player_small);
         mNavigationView = findViewById(R.id.my_navigation_view);
         mBottomNavigationView = findViewById(R.id.bottom_navigation);
 
@@ -308,6 +311,8 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
                     FragmentTransaction fragmentTransaction = mFragmentManager.beginTransaction();
                     fragmentTransaction.hide(mFragmentManager.findFragmentById(R.id.containerView));
                     fragmentTransaction.commit();
+
+                    updateFullScreenUI(true);
                 } else if (newState == BottomSheetBehavior.STATE_COLLAPSED) {
                     appBarLayout.setExpanded(true);
                     smallPlayerFragment.setRole(FragmentPlayerSmall.Role.PLAYER);
@@ -316,6 +321,8 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
                     FragmentTransaction fragmentTransaction = mFragmentManager.beginTransaction();
                     fragmentTransaction.hide(fullPlayerFragment);
                     fragmentTransaction.commit();
+
+                    updateFullScreenUI(false);
                 }
 
                 if (oldState == BottomSheetBehavior.STATE_EXPANDED && newState != BottomSheetBehavior.STATE_EXPANDED) {
@@ -1152,11 +1159,73 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
         }
     }
 
+    private void updateFullScreenUI(boolean isExpanded) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ActivityMain.this);
+        String fullscreenMode = prefs.getString("fullscreen_mode", "default");
+        boolean autoRotate = prefs.getBoolean("fullscreen_auto_rotate", false);
+        int orientation = getResources().getConfiguration().orientation;
+        boolean isLandscape = orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        boolean isSimpleMode = false;
+
+        if (autoRotate) {
+            isSimpleMode = isLandscape;
+        } else {
+            isSimpleMode = "simple".equals(fullscreenMode);
+        }
+
+        if (isExpanded && isSimpleMode && isLandscape) {
+            // 进入全屏：隐藏ActionBar、AppBarLayout、BottomNavigationView
+            if (getSupportActionBar() != null) {
+                getSupportActionBar().hide();
+            }
+            appBarLayout.setVisibility(View.GONE);
+            if (mBottomNavigationView != null) {
+                mBottomNavigationView.setVisibility(View.GONE);
+            }
+            fragmentPlayerSmallContainer.setVisibility(View.GONE);
+
+            // 隐藏系统状态栏和导航栏
+            getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_FULLSCREEN
+            );
+        } else {
+            // 退出全屏：显示ActionBar、AppBarLayout、BottomNavigationView
+            if (getSupportActionBar() != null) {
+                getSupportActionBar().show();
+            }
+            appBarLayout.setVisibility(View.VISIBLE);
+            if (mBottomNavigationView != null) {
+                mBottomNavigationView.setVisibility(View.VISIBLE);
+            }
+            fragmentPlayerSmallContainer.setVisibility(View.VISIBLE);
+
+            // 显示系统状态栏和导航栏
+            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
+        }
+    }
+
     public void toggleBottomSheetState() {
         if (playerBottomSheet.getState() == BottomSheetBehavior.STATE_EXPANDED) {
             playerBottomSheet.setState(BottomSheetBehavior.STATE_COLLAPSED);
         } else {
             playerBottomSheet.setState(BottomSheetBehavior.STATE_EXPANDED);
+        }
+    }
+
+    @Override
+    public void onConfigurationChanged(android.content.res.Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+
+        if (playerBottomSheet != null && playerBottomSheet.getState() == BottomSheetBehavior.STATE_EXPANDED) {
+            // 更新全屏UI
+            updateFullScreenUI(true);
+            // 让FragmentPlayerFull也重建视图以适应新方向
+            fullPlayerFragment.init();
         }
     }
 
