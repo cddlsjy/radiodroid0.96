@@ -703,10 +703,10 @@ public class FragmentPlayerFull extends Fragment {
 
         if (btnPlay != null) {
             if (PlayerServiceUtil.isPlaying()) {
-                btnPlay.setImageResource(R.drawable.ic_pause_24dp);
+                btnPlay.setImageResource(isLandscape() ? R.drawable.ic_pause_24dp : R.drawable.ic_pause_circle);
                 btnPlay.setContentDescription(getResources().getString(R.string.detail_pause));
             } else {
-                btnPlay.setImageResource(R.drawable.ic_play_arrow_24dp);
+                btnPlay.setImageResource(isLandscape() ? R.drawable.ic_play_arrow_24dp : R.drawable.ic_play_circle);
                 btnPlay.setContentDescription(getResources().getString(R.string.detail_play));
             }
         }
@@ -730,12 +730,17 @@ public class FragmentPlayerFull extends Fragment {
         if (btnPlay == null) return;
 
         if (playing) {
-            btnPlay.setImageResource(R.drawable.ic_pause_24dp);
+            btnPlay.setImageResource(isLandscape() ? R.drawable.ic_pause_24dp : R.drawable.ic_pause_circle);
             btnPlay.setContentDescription(getResources().getString(R.string.detail_pause));
         } else {
-            btnPlay.setImageResource(R.drawable.ic_play_arrow_24dp);
+            btnPlay.setImageResource(isLandscape() ? R.drawable.ic_play_arrow_24dp : R.drawable.ic_play_circle);
             btnPlay.setContentDescription(getResources().getString(R.string.detail_play));
         }
+    }
+
+    private boolean isLandscape() {
+        int orientation = getResources().getConfiguration().orientation;
+        return orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
     }
 
     private void updateRecordButton(final boolean playing, final boolean recording) {
