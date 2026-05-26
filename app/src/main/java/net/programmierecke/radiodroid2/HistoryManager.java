@@ -1,0 +1,45 @@
+package net.programmierecke.radiodroid2;
+
+import android.content.Context;
+
+import net.programmierecke.radiodroid2.station.DataRadioStation;
+
+import java.util.ArrayList;
+
+public class HistoryManager extends StationSaveManager{
+    private static final int MAXSIZE = 25;
+
+    @Override
+    protected String getSaveId(){
+        return "history";
+    }
+
+    public HistoryManager(Context ctx) {
+        super(ctx);
+    }
+
+    @Override
+    public void add(DataRadioStation station){
+        DataRadioStation stationFromHistory = getById(station.StationUuid);
+        if (stationFromHistory != null) {
+            listStations.remove(stationFromHistory);
+            stationFromHistory.queue = station.queue;
+            listStations.add(0, stationFromHistory);
+            Save();
+            return;
+        }
+
+        cutList(MAXSIZE - 1);
+        StationSaveManager originalQueue = station.queue;
+        super.addFront(station);
+        if (originalQueue != null) {
+            station.queue = originalQueue;
+        }
+    }
+
+    private void cutList(int count){
+        if (listStations.size() > count){
+            listStations = new ArrayList<>(listStations.subList(0, count));
+        }
+    }
+}

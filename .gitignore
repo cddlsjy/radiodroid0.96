@@ -1,0 +1,65 @@
+# built application files
+*.apk
+*.ap_
+
+# files for the dex VM
+*.dex
+
+# Java class files
+*.class
+
+# generated files
+bin/
+gen/
+
+# Local configuration file (sdk path, etc)
+local.properties
+
+# Eclipse project files
+.classpath
+.project
+
+# idea IDE
+.idea*
+*.iml
+captures/
+
+# Built application files
+/*/build/
+/*/play/
+
+# Local configuration file (sdk path, etc)
+local.properties
+
+# Gradle generated files
+.gradle/
+gradle/
+
+# Signing files
+.signing/
+
+build/*
+.DS_Store
+
+*.aab
+
+# APK output directories
+app/build/outputs/apk/
+app/build/outputs/bundle/
+
+# Gradle wrapper
+gradlew
+gradlew.bat
+gradle-wrapper.jar
+
+# VS Code
+.vscode/
+
+# OS files
+Thumbs.db
+
+# Log files
+*.log
+build_debug.log
+# Logcat output
+logcat*.txt

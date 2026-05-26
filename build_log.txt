@@ -1,0 +1,55 @@
+Starting Gradle build... 
+JAVA_HOME=C:\Program Files\Java\jdk1.8.0_202 
+22:05
+To honour the JVM settings for this build a single-use Daemon process will be forked. See https://docs.gradle.org/7.6/userguide/gradle_daemon.html#sec:disabling_the_daemon.
+Daemon will be stopped at the end of the build 
+
+> Configure project :app
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+Warning: Mapping new ns http://schemas.android.com/repository/android/common/02 to old ns http://schemas.android.com/repository/android/common/01
+Warning: Mapping new ns http://schemas.android.com/repository/android/generic/02 to old ns http://schemas.android.com/repository/android/generic/01
+Warning: Mapping new ns http://schemas.android.com/sdk/android/repo/addon2/02 to old ns http://schemas.android.com/sdk/android/repo/addon2/01
+Warning: Mapping new ns http://schemas.android.com/sdk/android/repo/addon2/03 to old ns http://schemas.android.com/sdk/android/repo/addon2/01
+Warning: Mapping new ns http://schemas.android.com/sdk/android/repo/repository2/02 to old ns http://schemas.android.com/sdk/android/repo/repository2/01
+Warning: Mapping new ns http://schemas.android.com/sdk/android/repo/repository2/03 to old ns http://schemas.android.com/sdk/android/repo/repository2/01
+Warning: Mapping new ns http://schemas.android.com/sdk/android/repo/sys-img2/03 to old ns http://schemas.android.com/sdk/android/repo/sys-img2/01
+Warning: Mapping new ns http://schemas.android.com/sdk/android/repo/sys-img2/02 to old ns http://schemas.android.com/sdk/android/repo/sys-img2/01
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preFreeDebugBuild UP-TO-DATE
+> Task :app:compileFreeDebugAidl
+> Task :app:compileFreeDebugRenderscript NO-SOURCE
+> Task :app:dataBindingMergeDependencyArtifactsFreeDebug
+> Task :app:dataBindingMergeGenClassesFreeDebug
+> Task :app:generateFreeDebugResValues
+> Task :app:generateFreeDebugResources
+
+> Task :app:mergeFreeDebugResources FAILED
+ERROR:C:\Users\M8400\.gradle\caches\transforms-3\f2eb7f37d32e722a81b24b351690c933\transformed\material-1.8.0-beta01\res\values\values.xml: Resource and asset merger: Can't determine type for tag '<macro name="m3_comp_assist_chip_container_shape">?attr/shapeAppearanceCornerSmall</macro>'
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:mergeFreeDebugResources'.
+> C:\Users\M8400\.gradle\caches\transforms-3\f2eb7f37d32e722a81b24b351690c933\transformed\material-1.8.0-beta01\res\values\values.xml: Error: Can't determine type for tag '<macro name="m3_comp_assist_chip_container_shape">?attr/shapeAppearanceCornerSmall</macro>'
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 8.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+See https://docs.gradle.org/7.6/userguide/command_line_interface.html#sec:command_line_warnings
+
+BUILD FAILED in 1m 44s
+5 actionable tasks: 5 executed
+Build finished with code: 1 
+22:07
