@@ -79,6 +79,7 @@ public class FragmentPlayerFull extends Fragment {
 
     private static final String FULLSCREEN_MODE_DEFAULT = "default";
     private static final String FULLSCREEN_MODE_SIMPLE = "simple";
+    private static final String FULLSCREEN_MODE_AUTO = "auto";
 
     private final static int PERM_REQ_STORAGE_RECORD = 1001;
 
@@ -143,7 +144,6 @@ public class FragmentPlayerFull extends Fragment {
     private String currentInflatedMode = FULLSCREEN_MODE_DEFAULT;
     private String currentInflatedBgColor = "white";
     private int currentInflatedOrientation = -1;
-    private boolean currentInflatedAutoRotate = false;
 
     private com.google.android.material.imageview.ShapeableImageView simpleStationIcon;
     private TextView simpleStationName;
@@ -196,8 +196,8 @@ public class FragmentPlayerFull extends Fragment {
 
     private String getEffectiveMode() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(requireContext());
-        boolean autoRotate = prefs.getBoolean("fullscreen_auto_rotate", false);
-        if (autoRotate) {
+        String mode = prefs.getString("fullscreen_mode", FULLSCREEN_MODE_DEFAULT);
+        if (FULLSCREEN_MODE_AUTO.equals(mode)) {
             int orientation = getResources().getConfiguration().orientation;
             if (orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) {
                 return FULLSCREEN_MODE_SIMPLE;
@@ -205,7 +205,7 @@ public class FragmentPlayerFull extends Fragment {
                 return FULLSCREEN_MODE_DEFAULT;
             }
         }
-        return prefs.getString("fullscreen_mode", FULLSCREEN_MODE_DEFAULT);
+        return mode;
     }
 
     private void inflateContent(FrameLayout container) {
@@ -219,7 +219,6 @@ public class FragmentPlayerFull extends Fragment {
         currentInflatedMode = fullscreenMode;
         currentInflatedBgColor = bgColor;
         currentInflatedOrientation = getResources().getConfiguration().orientation;
-        currentInflatedAutoRotate = prefs.getBoolean("fullscreen_auto_rotate", false);
 
         LayoutInflater inflater = LayoutInflater.from(requireContext());
 
@@ -437,16 +436,13 @@ public class FragmentPlayerFull extends Fragment {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(requireContext());
         String currentMode = prefs.getString("fullscreen_mode", FULLSCREEN_MODE_DEFAULT);
         String currentBg = prefs.getString("fullscreen_bg_color", "white");
-        boolean currentAutoRotate = prefs.getBoolean("fullscreen_auto_rotate", false);
         int currentOrientation = getResources().getConfiguration().orientation;
 
         boolean effectiveModeChanged;
-        if (currentAutoRotate) {
-            effectiveModeChanged = currentInflatedAutoRotate != currentAutoRotate
-                    || currentInflatedOrientation != currentOrientation;
+        if (FULLSCREEN_MODE_AUTO.equals(currentMode)) {
+            effectiveModeChanged = currentInflatedOrientation != currentOrientation;
         } else {
-            effectiveModeChanged = !currentMode.equals(currentInflatedMode)
-                    || currentInflatedAutoRotate != currentAutoRotate;
+            effectiveModeChanged = !currentMode.equals(currentInflatedMode);
         }
         boolean bgChanged = !currentBg.equals(currentInflatedBgColor);
 

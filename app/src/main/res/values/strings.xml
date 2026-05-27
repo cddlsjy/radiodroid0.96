@@ -677,7 +677,7 @@ The app will automatically restart to load the new database.</string>
     <string name="settings_fullscreen_bg_color">Background color</string>
     <string name="settings_fullscreen_bg_color_white">White</string>
     <string name="settings_fullscreen_bg_color_dark_blue">Dark Blue</string>
-    <string name="settings_fullscreen_auto_rotate">Auto rotate (portrait=Default, landscape=Simple)</string>
+    <string name="settings_fullscreen_mode_auto">Auto (portrait=Default, landscape=Simple)</string>
     <string name="pref_auto_fullscreen_on_start_title">Auto enter fullscreen on startup</string>
     <string name="pref_auto_fullscreen_on_start_summary">Automatically expand player to fullscreen mode when app starts</string>
     <string name="tab_player_favourites">Favorites</string>

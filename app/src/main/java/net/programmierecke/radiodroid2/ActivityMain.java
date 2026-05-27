@@ -1162,12 +1162,11 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
     private void updateFullScreenUI(boolean isExpanded) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ActivityMain.this);
         String fullscreenMode = prefs.getString("fullscreen_mode", "default");
-        boolean autoRotate = prefs.getBoolean("fullscreen_auto_rotate", false);
         int orientation = getResources().getConfiguration().orientation;
         boolean isLandscape = orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
         boolean isSimpleMode = false;
 
-        if (autoRotate) {
+        if ("auto".equals(fullscreenMode)) {
             isSimpleMode = isLandscape;
         } else {
             isSimpleMode = "simple".equals(fullscreenMode);

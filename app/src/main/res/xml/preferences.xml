@@ -94,11 +94,6 @@
             search:summary=""
             android:summary="%s" />
 
-        <CheckBoxPreference
-            android:defaultValue="false"
-            android:key="fullscreen_auto_rotate"
-            android:title="@string/settings_fullscreen_auto_rotate" />
-
     </PreferenceScreen>
 
     <PreferenceScreen android:title="@string/settings_startup_behaviour"
