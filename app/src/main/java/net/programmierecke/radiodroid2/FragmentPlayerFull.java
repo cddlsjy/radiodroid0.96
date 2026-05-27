@@ -488,6 +488,43 @@ public class FragmentPlayerFull extends Fragment {
         if (btnNext != null) {
             btnNext.setOnClickListener(view -> PlayerServiceUtil.skipToNext());
         }
+
+        if (btnRecord != null) {
+            btnRecord.setOnClickListener(view -> {
+                if (PlayerServiceUtil.isRecording()) {
+                    PlayerServiceUtil.stopRecording();
+                    updateRunningRecording();
+                } else {
+                    if (Build.VERSION.SDK_INT >= 23) {
+                        if (requireActivity().checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                                != PackageManager.PERMISSION_GRANTED) {
+                            storagePermissionsDenied = true;
+                            requestPermissions(
+                                    new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                                    PERM_REQ_STORAGE_RECORD);
+                            return;
+                        }
+                    }
+                    storagePermissionsDenied = false;
+                    PlayerServiceUtil.startRecording();
+                }
+                updateRecordButton(PlayerServiceUtil.isPlaying(), PlayerServiceUtil.isRecording());
+            });
+        }
+
+        if (btnFavourite != null) {
+            btnFavourite.setOnClickListener(view -> {
+                DataRadioStation station = Utils.getCurrentOrLastStation(requireContext());
+                if (station == null) return;
+
+                if (favouriteManager.has(station.StationUuid)) {
+                    favouriteManager.remove(station.StationUuid);
+                } else {
+                    favouriteManager.add(station);
+                }
+                updateFavouriteButton();
+            });
+        }
     }
 
     @Override
